@@ -3,6 +3,16 @@ import random
 
 # 四元数クラスと回転操作は先ほどのコードを使用
 
+# 修正(2026-10-29): quaternion_from_axis_angle がこのファイルに含まれておらず
+# 未定義だったため、軸と角度（度）から単位四元数 (w, x, y, z) を作る関数を追加した
+def quaternion_from_axis_angle(axis, angle_degrees):
+    axis = np.asarray(axis, dtype=float)
+    axis = axis / np.linalg.norm(axis)
+    half = np.radians(angle_degrees) / 2.0
+    w = np.cos(half)
+    x, y, z = axis * np.sin(half)
+    return np.array([w, x, y, z])
+
 class RubiksCube:
     def __init__(self):
         # 初期状態を定義
@@ -44,10 +54,15 @@ class RubiksCube:
             self.rotate_face(face, clockwise)
 
     def reset_to_initial(self):
-        while self.move_history:
-            face, clockwise = self.move_history.pop()
+        # 修正(2026-10-29): rotate_face は呼び出しのたびに履歴へ追加するため、
+        # 履歴から pop しながら戻すと履歴が減らず無限ループになっていた。
+        # 履歴を一旦取り出して空にしてから逆操作を適用し、最後に再度空にする
+        moves = self.move_history[::-1]
+        self.move_history = []
+        for face, clockwise in moves:
             # 逆の操作を適用
             self.rotate_face(face, not clockwise)
+        self.move_history = []
 
     def print_cube(self):
         # キューブの状態を表示
